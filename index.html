@@ -172,6 +172,15 @@
       <p class="desc" id="teacherSummaryText">불러오는 중...</p>
 
       <div class="dash-section">
+        <h2>학생 레벨화 (진단평가 상/중/하 나누기)</h2>
+        <p class="muted-small">진단평가 점수가 있는 학생을 점수 상위·중위·하위 1/3씩 상/중/하로 나눕니다. 아직 진단평가를 안 한 학생은 제외됩니다. <strong>가능하면 모든 반의 진단평가가 끝난 뒤 한 번만 실행</strong>하세요 — 다시 실행하면 등급이 재계산됩니다(단, 학생에게 이미 보여준 맞춤힌트 단계 자체는 responses에 그대로 남아 바뀌지 않습니다).</p>
+        <p class="desc" id="levelingSummaryText"></p>
+        <div class="dash-tools">
+          <button class="btn-primary" id="btnRunLeveling">상/중/하 나누기 실행</button>
+        </div>
+      </div>
+
+      <div class="dash-section">
         <h2>학생별 진행 현황</h2>
         <div class="data-table-wrap"><table class="data-table" id="tableStudents"></table></div>
       </div>
@@ -211,6 +220,16 @@
       <div class="big-emoji">🔒</div>
       <h1>4차시는 아직이에요</h1>
       <p class="desc" id="round4LockedText">1~3차시는 모두 마쳤어요. 4차시(지연검사)는 선생님이 정한 날짜부터 시작할 수 있어요.</p>
+    </div>
+  </section>
+
+  <!-- 진단평가 완료 후, 교사가 상/중/하 레벨화를 실행하기 전까지 대기 -->
+  <section class="screen" id="screen-waiting-tier">
+    <div class="card center">
+      <div class="big-emoji">📝</div>
+      <h1>진단평가를 마쳤어요!</h1>
+      <p class="desc">우리 반 전체(또는 여러 반)의 진단평가가 다 끝나면 선생님이 결과를 정리해요. 정리가 끝나면 다음 단계(연습문제)가 열려요. 선생님이 안내한 시간에 이 화면에서 아래 버튼을 눌러 다시 확인해 주세요.</p>
+      <button class="btn-primary" id="btnWaitingRefresh" style="margin-top:16px;">다시 확인하기</button>
     </div>
   </section>
 
@@ -430,7 +449,7 @@ const ITEMS = {
       hints:[
         "input이나 문자열 형태의 숫자는 계산 전에 정수로 변환해야 해. 60으로 나눈 몫은 분, 나머지는 초가 돼.",
         "정수로 바꾼 값을 sec에 저장한 뒤 sec // 60과 sec % 60을 각각 계산해 보자.",
-        "정답 형태: sec = int(total_sec)\nminute = sec // 60\nsecond = sec % 60\nprint(f\"{minute}분 {second}초\")"
+        "정답 형태:\n\nsec = int(total_sec)\nminute = sec // 60\nsecond = sec % 60\nprint(str(minute) + \"분 \" + str(second) + \"초\")"
       ]},
     { id:"R1-V-predict", concept:"변수·자료형·연산자", type:"predict",
       prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
@@ -448,7 +467,7 @@ const ITEMS = {
       hints:[
         "두 값이 모두 기준을 만족해야 하므로 각 단계에서 and를 사용해야 해.",
         "더 높은 기준을 if에 먼저 쓰고, 다음 기준을 elif에 써야 첫 조건에 해당하는 학생이 아래 단계로 내려가지 않아.",
-        "정답 형태: if score >= 90 and attendance >= 80:\n    print(\"최우수\")\nelif score >= 80 and attendance >= 70:\n    print(\"통과\")\nelse:\n    print(\"보충\")"
+        "정답 형태:\n\nif score >= 90 and attendance >= 80:\n    print(\"최우수\")\nelif score >= 80 and attendance >= 70:\n    print(\"통과\")\nelse:\n    print(\"보충\")"
       ]},
     { id:"R1-C-predict", concept:"조건문", type:"predict",
       prompt:"다음 코드의 실행 결과를 쓰시오.",
@@ -470,7 +489,7 @@ const ITEMS = {
       hints:[
         "1~30을 반복하면서 '3의 배수'와 '5의 배수가 아님'을 동시에 검사해야 해.",
         "i % 3 == 0 and i % 5 != 0 인 경우에만 total에 i를 누적해.",
-        "정답 형태: for i in range(1, 31):\n    if i % 3 == 0 and i % 5 != 0:\n        total += i\nprint(total)"
+        "정답 형태:\n\nfor i in range(1, 31):\n    if i % 3 == 0 and i % 5 != 0:\n        total += i\nprint(total)"
       ]},
     { id:"R2-L-predict", concept:"반복문", type:"predict",
       prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
@@ -488,7 +507,7 @@ const ITEMS = {
       hints:[
         "함수 안에 누적 변수 total을 만들고 1부터 n까지 반복해야 해.",
         "반복 중 i % 3 == 0인 경우에만 total에 더하고, 반복이 모두 끝난 뒤 return해.",
-        "정답 형태: def sum_three(n):\n    total = 0\n    for i in range(1, n + 1):\n        if i % 3 == 0:\n            total += i\n    return total\n\nprint(sum_three(10))"
+        "정답 형태:\n\ndef sum_three(n):\n    total = 0\n    for i in range(1, n + 1):\n        if i % 3 == 0:\n            total += i\n    return total\n\nprint(sum_three(10))"
       ]},
     { id:"R2-F-predict", concept:"함수", type:"predict",
       prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
@@ -510,7 +529,7 @@ const ITEMS = {
       hints:[
         "백의 자리는 100으로 나눈 몫, 일의 자리는 10으로 나눈 나머지로 구할 수 있어.",
         "십의 자리는 먼저 10으로 나눈 몫을 만든 뒤 다시 10으로 나눈 나머지를 구하면 돼.",
-        "정답 형태: hundred = n // 100\nten = (n // 10) % 10\none = n % 10\nprint(hundred, ten, one)"
+        "정답 형태:\n\nhundred = n // 100\nten = (n // 10) % 10\none = n % 10\nprint(hundred, ten, one)"
       ]},
     { id:"R3-C-code", concept:"조건문", type:"code",
       prompt:"score와 submit을 이용해 score가 80 이상이면서 submit이 True이면 '통과', score가 80 이상이지만 submit이 False이면 '미제출', 그 외에는 '재평가'를 출력하는 코드를 작성하시오.",
@@ -519,7 +538,7 @@ const ITEMS = {
       hints:[
         "점수 조건을 먼저 판단한 뒤, 그 안에서 제출 여부를 다시 판단하는 중첩 조건문으로 작성할 수 있어.",
         "score >= 80이 참이면 submit의 참/거짓에 따라 '통과'와 '미제출'을 나눠.",
-        "정답 형태: if score >= 80:\n    if submit:\n        print(\"통과\")\n    else:\n        print(\"미제출\")\nelse:\n    print(\"재평가\")"
+        "정답 형태:\n\nif score >= 80:\n    if submit:\n        print(\"통과\")\n    else:\n        print(\"미제출\")\nelse:\n    print(\"재평가\")"
       ]},
     { id:"R3-L-predict", concept:"반복문", type:"predict",
       prompt:"다음 코드의 실행 결과를 쓰시오.",
@@ -709,21 +728,39 @@ document.getElementById("btnStart").addEventListener("click", async ()=>{
   }
 });
 
+document.getElementById("btnWaitingRefresh").addEventListener("click", async ()=>{
+  const btn = document.getElementById("btnWaitingRefresh");
+  btn.disabled = true;
+  btn.textContent = "확인 중...";
+  try{
+    const { data: stepData, error: stepErr } = await db.rpc("get_next_step", { p_student_no: state.studentNo, p_name: state.name });
+    if(stepErr) throw stepErr;
+    const row = stepData?.[0] || {};
+    if(row.out_diagnostic_tier) state.diagnosticTier = row.out_diagnostic_tier;
+    goToStep(row.out_next_step || "waiting_for_leveling");
+  }catch(e){
+    console.error(e);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "다시 확인하기";
+  }
+});
+
 function goToStep(step){
   switch(step){
     case "diagnostic":
       startQuiz(ITEMS.diagnostic, {
         phase:"diagnostic", round_no:1, withHints:false, label:"진단평가 (1차시)",
         onComplete: async (correctCount)=>{
-          const tier = correctCount >= 7 ? "상" : (correctCount >= 4 ? "중" : "하");
-          state.diagnosticTier = tier;
           try{
-            await db.rpc("set_diagnostic_result", { p_student_no: state.studentNo, p_name: state.name, p_score: correctCount, p_tier: tier });
+            await db.rpc("set_diagnostic_result", { p_student_no: state.studentNo, p_name: state.name, p_score: correctCount });
           }catch(e){ console.error("진단결과 저장 실패", e); }
-          enterPracticeIntro(1);
+          // 등급(상/중/하)은 선생님이 모든 반 진단평가 종료 후 "학생 레벨화"를 실행해야 정해짐.
+          showScreen("screen-waiting-tier");
         }
       });
       break;
+    case "waiting_for_leveling": showScreen("screen-waiting-tier"); break;
     case "round1_practice": enterPracticeIntro(1); break;
     case "round1_reflection": enterCheckin(1); break;
     case "round2_practice": enterPracticeIntro(2); break;
@@ -1271,6 +1308,29 @@ document.getElementById("btnTeacherLogin").addEventListener("click", async ()=>{
 
 document.getElementById("btnTeacherRefresh").addEventListener("click", loadTeacherDashboard);
 
+document.getElementById("btnRunLeveling").addEventListener("click", async ()=>{
+  const ok = await askConfirm("진단평가 점수가 있는 모든 학생을 상/중/하 1/3씩으로 나눕니다. 이미 등급이 있는 학생도 다시 계산되어 덮어써집니다. 실행할까요?");
+  if(!ok) return;
+  const btn = document.getElementById("btnRunLeveling");
+  const summaryEl = document.getElementById("levelingSummaryText");
+  btn.disabled = true;
+  btn.textContent = "실행 중...";
+  try{
+    const { data, error } = await db.rpc("teacher_level_students", { p_password: teacherPassword });
+    if(error) throw error;
+    const rows = data || [];
+    const counts = { "상":0, "중":0, "하":0 };
+    rows.forEach(r => { if(counts[r.diagnostic_tier] !== undefined) counts[r.diagnostic_tier]++; });
+    summaryEl.textContent = `완료: 진단평가 응시 ${rows.length}명 → 상 ${counts["상"]}명 / 중 ${counts["중"]}명 / 하 ${counts["하"]}명으로 나눴습니다.`;
+    await loadTeacherDashboard();
+  }catch(e){
+    console.error("레벨화 실패", e);
+    summaryEl.textContent = "레벨화에 실패했습니다. 새로고침 후 다시 시도해주세요.";
+  }
+  btn.disabled = false;
+  btn.textContent = "상/중/하 나누기 실행";
+});
+
 async function loadTeacherDashboard(){
   document.getElementById("teacherSummaryText").textContent = "불러오는 중...";
   try{
@@ -1296,9 +1356,11 @@ const CONDITION_LABEL = { no_hint:"힌트없음", auto_hint:"자동힌트", self
 function computeStudentProgress(studentNo){
   const resp = teacherData.responses.filter(r=>r.student_no===studentNo);
   const refl = teacherData.reflections.filter(r=>r.student_no===studentNo);
+  const student = teacherData.students.find(s=>s.student_no===studentNo);
   const cnt = (round_no, phase) => resp.filter(r=>r.round_no===round_no && r.phase===phase).length;
   const hasRefl = (round_no) => refl.some(r=>r.round_no===round_no);
   if(cnt(1,"diagnostic") < 1) return "진단평가 전";
+  if(!student || !student.diagnostic_tier) return "레벨화 대기중";
   if(cnt(1,"practice") < 4) return "1차시 연습 중";
   if(!hasRefl(1)) return "1차시 체크인 전";
   if(cnt(2,"practice") < 4) return "2차시 연습 중";
@@ -1325,8 +1387,10 @@ function renderTable(elId, headers, rows){
 
 function renderTeacherDashboard(){
   const students = teacherData.students;
+  const diagDoneCount = students.filter(s=>s.diagnostic_score !== null && s.diagnostic_score !== undefined).length;
+  const leveledCount = students.filter(s=>!!s.diagnostic_tier).length;
   document.getElementById("teacherSummaryText").textContent =
-    `등록 학생 ${students.length}명 · 조건별 인원 — ` +
+    `등록 학생 ${students.length}명 · 진단평가 완료 ${diagDoneCount}명 · 레벨화(등급 부여) 완료 ${leveledCount}명 · 조건별 인원 — ` +
     Object.entries(CONDITION_LABEL).map(([k,label]) => `${label} ${students.filter(s=>s.condition===k).length}명`).join(" / ");
 
   renderTable("tableStudents",

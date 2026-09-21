@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>광문고 2학년 정보 — 파이썬 형성평가</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f7f3ec;         /* beige */
+    --card:#ffffff;       /* white */
+    --blue:#2563eb;
+    --blue-dark:#1d4ed8;
+    --blue-soft:#eaf1fd;
+    --beige-soft:#f0e6d6;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#e6e1d6;
+    --good:#16a34a;
+    --bad:#dc2626;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--bg); color:var(--text); min-height:100vh;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:24px 16px 64px;}
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; background:var(--card); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:10;
+  }
+  header.top .brand{font-weight:700; color:var(--blue-dark); font-size:15px;}
+  header.top .sub{font-size:12px; color:var(--muted);}
+  header.top .timer{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:24px; margin-top:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03);
+  }
+  h1{font-size:20px; margin:0 0 6px;}
+  h2{font-size:17px; margin:0 0 12px; color:var(--blue-dark);}
+  p.desc{color:var(--muted); font-size:14px; line-height:1.6;}
+  label{display:block; font-size:13px; color:var(--muted); margin:14px 0 6px;}
+  input[type=text], textarea{
+    width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:10px;
+    font-size:15px; font-family:inherit; background:#fff;
+  }
+  textarea{resize:vertical; min-height:80px; font-family:'D2Coding','Consolas',monospace; font-size:14px;}
+  textarea.prose{font-family:inherit; font-size:14px;}
+  textarea.code-editor{min-height:110px;}
+  button{
+    cursor:pointer; border:none; border-radius:10px; font-size:15px; font-weight:600;
+    padding:12px 20px; font-family:inherit;
+  }
+  .btn-primary{background:var(--blue); color:#fff;}
+  .btn-primary:disabled{background:#b9c8ee; cursor:not-allowed;}
+  .btn-primary:hover:not(:disabled){background:var(--blue-dark);}
+  .btn-ghost{background:var(--beige-soft); color:var(--text);}
+  .btn-ghost:hover{background:#e6d9c0;}
+  .row-btns{display:flex; gap:10px; margin-top:18px; justify-content:flex-end;}
+  .progress-bar{height:6px; background:var(--beige-soft); border-radius:6px; overflow:hidden; margin-bottom:18px;}
+  .progress-fill{height:100%; background:var(--blue); transition:width .25s;}
+  .tag{
+    display:inline-block; font-size:11px; padding:3px 9px; border-radius:999px;
+    background:var(--blue-soft); color:var(--blue-dark); font-weight:600; margin-right:6px;
+  }
+  .tag.beige{background:var(--beige-soft); color:#8a6d3b;}
+  pre.code-block{
+    background:#f4f6fb; border:1px solid var(--border); border-radius:10px; padding:14px;
+    font-family:'D2Coding','Consolas',monospace; font-size:14px; overflow-x:auto; line-height:1.55;
+  }
+  .feedback{margin-top:12px; padding:12px 14px; border-radius:10px; font-size:14px; display:none; white-space:pre-wrap;}
+  .feedback.ok{background:#eafaf0; color:var(--good); display:block;}
+  .feedback.no{background:#fdeeee; color:var(--bad); display:block;}
+  .hint-box{
+    margin-top:14px; padding:14px; background:var(--blue-soft); border-radius:10px; font-size:14px; color:#1e3a8a;
+    display:none; white-space:pre-wrap; line-height:1.6;
+  }
+  .ai-box{margin-top:16px; padding:16px; background:var(--beige-soft); border-radius:10px;}
+  .ai-box p{margin:0 0 8px; font-size:13px; color:#7a5c2e;}
+  .scale-row{display:flex; gap:8px; margin-top:8px;}
+  .scale-btn{
+    flex:1; background:#fff; border:1px solid var(--border); border-radius:10px;
+    padding:12px 4px; font-size:14px; font-weight:600; color:var(--muted); line-height:1.4;
+  }
+  .scale-btn span{display:block; font-size:10px; font-weight:400; margin-top:2px;}
+  .scale-btn.selected{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .muted-small{font-size:12px; color:var(--muted); margin-top:8px;}
+  .center{text-align:center;}
+  .big-emoji{font-size:44px; margin-bottom:6px;}
+
+  .teacher-link{
+    display:block; text-align:center; margin-top:16px; font-size:12px; color:var(--muted);
+    text-decoration:underline; cursor:pointer; background:none; border:none; padding:6px; width:100%;
+  }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(31,41,55,0.45); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal-box{
+    background:#fff; border-radius:var(--radius); padding:22px; max-width:360px; width:100%;
+    box-shadow:0 8px 24px rgba(0,0,0,0.18);
+  }
+  .modal-box p{font-size:14px; line-height:1.6; margin:0 0 18px;}
+  .modal-box .row-btns{margin-top:0;}
+  .data-table-wrap{overflow-x:auto; margin-top:14px; border:1px solid var(--border); border-radius:10px;}
+  table.data-table{border-collapse:collapse; width:100%; font-size:12.5px; white-space:nowrap;}
+  table.data-table th, table.data-table td{padding:7px 10px; border-bottom:1px solid var(--border); text-align:left;}
+  table.data-table th{background:var(--beige-soft); color:#7a5c2e; position:sticky; top:0;}
+  table.data-table tr:last-child td{border-bottom:none;}
+  .dash-section{margin-top:22px;}
+  .dash-section h2{margin-bottom:4px;}
+  .dash-tools{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+  .dash-tools button{font-size:12.5px; padding:8px 12px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <div class="brand">광문고 2학년 정보</div>
+    <div class="sub">담당: 김채연 선생님 · 파이썬 형성평가</div>
+  </div>
+  <div class="timer" id="timerDisplay">00:00</div>
+</header>
+
+<div class="wrap">
+
+  <!-- 로그인 -->
+  <section class="screen active" id="screen-login">
+    <div class="card">
+      <h1>오늘의 파이썬 활동</h1>
+      <p class="desc">변수·조건문·반복문·함수를 총 4차시에 걸쳐 점검합니다. 학번과 이름을 입력하면 오늘 진행할 차시로 자동으로 안내돼요.</p>
+      <label>학번</label>
+      <input type="text" id="inputStudentNo" placeholder="예: 20305" inputmode="numeric" />
+      <label>이름</label>
+      <input type="text" id="inputName" placeholder="예: 홍길동" />
+      <div class="row-btns">
+        <button class="btn-primary" id="btnStart">시작하기</button>
+      </div>
+      <div class="muted-small" id="loginError" style="color:var(--bad);"></div>
+    </div>
+    <button class="teacher-link" id="btnTeacherLink">교사이신가요? 교사용 화면 보기</button>
+  </section>
+
+  <!-- 교사용: 비밀번호 입력 -->
+  <section class="screen" id="screen-teacher-login">
+    <div class="card">
+      <h1>교사용 화면</h1>
+      <p class="desc">학생 진행 현황과 힌트 확인 기록을 볼 수 있어요. schema.sql에서 설정한 비밀번호를 입력하세요.</p>
+      <label>비밀번호</label>
+      <input type="text" id="inputTeacherPw" placeholder="비밀번호" />
+      <div class="row-btns">
+        <button class="btn-ghost" id="btnTeacherBack">뒤로</button>
+        <button class="btn-primary" id="btnTeacherLogin">확인</button>
+      </div>
+      <div class="muted-small" id="teacherLoginError" style="color:var(--bad);"></div>
+    </div>
+  </section>
+
+  <!-- 교사용: 대시보드 -->
+  <section class="screen" id="screen-teacher-dashboard">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 style="margin:0;">교사용 대시보드</h1>
+        <button class="btn-ghost" id="btnTeacherRefresh">새로고침</button>
+      </div>
+      <p class="desc" id="teacherSummaryText">불러오는 중...</p>
+
+      <div class="dash-section">
+        <h2>학생별 진행 현황</h2>
+        <div class="data-table-wrap"><table class="data-table" id="tableStudents"></table></div>
+      </div>
+
+      <div class="dash-section">
+        <h2>힌트 확인 기록 (연습문제)</h2>
+        <p class="muted-small">1·2·3단계 각각 문항 표시 후 몇 초 만에 확인했는지(초). 비어있으면 그 단계를 보지 않은 것입니다. 3단계는 정답 확인 팝업에서 "확인" 눌렀을 때만 기록됩니다.</p>
+        <div class="data-table-wrap"><table class="data-table" id="tableHints"></table></div>
+      </div>
+
+      <div class="dash-section">
+        <h2>내보내기</h2>
+        <div class="dash-tools">
+          <button class="btn-ghost" id="btnExportResponses">전체 응답 CSV</button>
+          <button class="btn-ghost" id="btnExportReflections">전체 성찰 CSV</button>
+        </div>
+      </div>
+
+      <div class="row-btns">
+        <button class="btn-ghost" id="btnTeacherLogout">로그아웃</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 완전 종료(4차시 모두 완료) -->
+  <section class="screen" id="screen-already">
+    <div class="card center">
+      <div class="big-emoji">✅</div>
+      <h1>모든 차시를 이미 완료했어요</h1>
+      <p class="desc">같은 학번으로 1~4차시를 모두 마쳤습니다. 다시 참여할 필요는 없어요. 수고했습니다!</p>
+    </div>
+  </section>
+
+  <!-- 4차시 잠금(2주 미경과) -->
+  <section class="screen" id="screen-round4-locked">
+    <div class="card center">
+      <div class="big-emoji">🔒</div>
+      <h1>4차시는 아직이에요</h1>
+      <p class="desc" id="round4LockedText">1~3차시는 모두 마쳤어요. 4차시(지연검사)는 선생님이 정한 날짜부터 시작할 수 있어요.</p>
+    </div>
+  </section>
+
+  <!-- 회차 중간 완료(1·2·3차시 종료 후 공통) -->
+  <section class="screen" id="screen-round-done">
+    <div class="card center">
+      <div class="big-emoji">🙂</div>
+      <h1 id="roundDoneTitle">이번 차시를 마쳤어요</h1>
+      <p class="desc" id="roundDoneText">수고했습니다! 다음 차시에서 또 만나요.</p>
+    </div>
+  </section>
+
+  <!-- 범용 퀴즈 화면 (진단평가 / 연습문제 1·2·3차시 / 형성평가(3차시) / 지연검사(4차시) 공용) -->
+  <section class="screen" id="screen-quiz">
+    <div class="card">
+      <span class="tag" id="quizTag">진단평가</span>
+      <span class="tag beige" id="quizProgressTag">1 / 8</span>
+      <div class="progress-bar" style="margin-top:14px;"><div class="progress-fill" id="quizProgressFill" style="width:12%"></div></div>
+      <div id="quizItemArea"></div>
+      <div class="row-btns">
+        <button class="btn-primary" id="quizNextBtn" disabled>다음</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 연습 안내 -->
+  <section class="screen" id="screen-practice-intro">
+    <div class="card center">
+      <div class="big-emoji">✏️</div>
+      <h1 id="practiceIntroTitle">연습문제</h1>
+      <p class="desc" id="practiceIntroText"></p>
+      <div class="row-btns" style="justify-content:center;">
+        <button class="btn-primary" id="btnPracticeStart">연습문제 시작</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 짧은 체크인(1·2차시 종료 후) -->
+  <section class="screen" id="screen-checkin">
+    <div class="card">
+      <span class="tag" id="checkinTag">1차시 체크인</span>
+      <h1 style="margin-top:12px;">오늘은 어땠나요?</h1>
+      <p class="desc">짧게 한두 문장이면 충분해요.</p>
+
+      <label id="checkinQ1Label">오늘 연습문제를 풀면서 어떤 느낌이었나요?</label>
+      <textarea class="prose" id="checkinQ1" placeholder="예: 반복문 문제가 헷갈렸는데 여러 번 시도하면서 감이 잡혔어요."></textarea>
+
+      <label>오늘 학습 방식이 문제를 이해하는 데 도움이 되었다고 생각하나요?</label>
+      <div class="scale-row" id="checkinScale">
+        <button type="button" class="scale-btn" data-val="1">1<br><span>전혀 아니다</span></button>
+        <button type="button" class="scale-btn" data-val="2">2</button>
+        <button type="button" class="scale-btn" data-val="3">3</button>
+        <button type="button" class="scale-btn" data-val="4">4</button>
+        <button type="button" class="scale-btn" data-val="5">5<br><span>매우 그렇다</span></button>
+      </div>
+      <textarea class="prose" id="checkinScaleReason" style="margin-top:10px;" placeholder="그렇게 생각한 이유를 한두 문장으로 적어주세요."></textarea>
+
+      <div class="row-btns">
+        <button class="btn-primary" id="btnCheckinSubmit" disabled>제출하기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 종합 성찰(3차시 — 1~3차시 전체를 돌아봄) -->
+  <section class="screen" id="screen-reflection">
+    <div class="card">
+      <span class="tag">3차시 · 마지막 단계</span>
+      <h1 style="margin-top:12px;">1~3차시를 돌아보며</h1>
+      <p class="desc">형성평가까지 모두 마쳤어요. 지난 세 번의 연습을 돌아보며 자유롭게 남겨주세요.</p>
+
+      <label>① 1~3차시 동안 연습문제를 풀 때 전반적으로 어떤 느낌이었나요?</label>
+      <textarea class="prose" id="refQ1" placeholder="예: 반복문 문제가 헷갈렸는데 여러 번 시도하면서 감이 잡혔어요."></textarea>
+
+      <label>② 오늘 형성평가를 풀면서, 연습문제에서 배운 내용이 도움이 되었다고 느꼈나요? 어떤 부분에서 그랬는지 적어주세요.</label>
+      <textarea class="prose" id="refQ2" placeholder="예: 연습문제랑 비슷한 유형이라 어떻게 접근해야 할지 바로 떠올랐어요."></textarea>
+
+      <label id="refQ3Label">③</label>
+      <textarea class="prose" id="refQ3"></textarea>
+
+      <label>④ 1~3차시 동안 스스로 전략을 바꾸거나 다시 점검했던 순간이 있었다면 적어주세요.</label>
+      <textarea class="prose" id="refQ4" placeholder="예: 처음엔 감으로 풀다가 안 돼서 코드를 한 줄씩 다시 읽어봤어요."></textarea>
+
+      <label>⑤ 1~3차시의 학습 방식이 문제를 이해하는 데 도움이 되었다고 생각하나요?</label>
+      <div class="scale-row" id="refScale">
+        <button type="button" class="scale-btn" data-val="1">1<br><span>전혀 아니다</span></button>
+        <button type="button" class="scale-btn" data-val="2">2</button>
+        <button type="button" class="scale-btn" data-val="3">3</button>
+        <button type="button" class="scale-btn" data-val="4">4</button>
+        <button type="button" class="scale-btn" data-val="5">5<br><span>매우 그렇다</span></button>
+      </div>
+      <textarea class="prose" id="refScaleReason" style="margin-top:10px;" placeholder="그렇게 생각한 이유를 한두 문장으로 적어주세요."></textarea>
+
+      <div class="row-btns">
+        <button class="btn-primary" id="btnReflectionSubmit" disabled>제출하기</button>
+      </div>
+      <div class="muted-small">이 후기는 선생님의 수업 개선과 연구 자료로만 사용되며, 성적과는 무관합니다.</div>
+    </div>
+  </section>
+
+  <!-- 4차시 최종 성찰(2주 후 — 회고형) -->
+  <section class="screen" id="screen-reflection4">
+    <div class="card">
+      <span class="tag">4차시 · 마지막 단계</span>
+      <h1 style="margin-top:12px;">2주 전과 비교해보면</h1>
+      <p class="desc">오늘 지연검사까지 모두 마쳤어요. 2주 전(1~3차시)을 떠올리며 답해주세요.</p>
+
+      <label>① 2주 전과 비교해서, 오늘 문제를 풀 때 어떤 점이 비슷하거나 달랐나요?</label>
+      <textarea class="prose" id="ref4Q1" placeholder="예: 그때 배운 느낌이 어렴풋이 남아있어서 비슷하게 접근했어요."></textarea>
+
+      <label>② 그때 배운 내용 중에서 오늘까지 기억에 남아 도움이 된 부분이 있다면 적어주세요. (없으면 없다고 적어도 괜찮아요)</label>
+      <textarea class="prose" id="ref4Q2" placeholder="예: 조건문 순서를 위에서부터 검사한다는 게 기억에 남았어요."></textarea>
+
+      <label>③ 오늘도 그때의 학습 방식(힌트·피드백 방식)이 도움이 되었다고 생각하나요?</label>
+      <div class="scale-row" id="ref4Scale">
+        <button type="button" class="scale-btn" data-val="1">1<br><span>전혀 아니다</span></button>
+        <button type="button" class="scale-btn" data-val="2">2</button>
+        <button type="button" class="scale-btn" data-val="3">3</button>
+        <button type="button" class="scale-btn" data-val="4">4</button>
+        <button type="button" class="scale-btn" data-val="5">5<br><span>매우 그렇다</span></button>
+      </div>
+      <textarea class="prose" id="ref4ScaleReason" style="margin-top:10px;" placeholder="그렇게 생각한 이유를 한두 문장으로 적어주세요."></textarea>
+
+      <div class="row-btns">
+        <button class="btn-primary" id="btnReflection4Submit" disabled>제출하고 마치기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 완료(전체 4차시 종료) -->
+  <section class="screen" id="screen-done">
+    <div class="card center">
+      <div class="big-emoji">🎉</div>
+      <h1>수고했습니다!</h1>
+      <p class="desc">1차시부터 4차시(지연검사)까지 모든 활동을 마쳤습니다. 결과는 선생님이 확인 후 안내해 드릴게요.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- 공용 확인 팝업 (힌트 3단계 = 정답 확인 전 안내 등) -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal-box">
+    <p id="confirmMessage"></p>
+    <div class="row-btns">
+      <button class="btn-ghost" id="confirmCancelBtn">취소</button>
+      <button class="btn-primary" id="confirmOkBtn">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   설정
+   ============================================================ */
+const SUPABASE_URL = "https://scqvddbdrubesjllmeuv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_afJwvTH2gqjiqf2HRefONw_k_IlivJr";
+
+// 4차시(지연검사)를 열어줄 날짜. 1~3차시를 진행한 날로부터 2주 후 날짜로 바꿔주세요.
+// 이 날짜 이전에는 1~3차시를 마친 학생이 다시 접속해도 "4차시는 아직이에요" 화면만 보입니다.
+const ROUND4_UNLOCK_DATE = "2026-09-29"; // YYYY-MM-DD, 이 날짜의 00:00부터 4차시 진입 가능
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function isRound4Unlocked(){
+  const unlock = new Date(ROUND4_UNLOCK_DATE + "T00:00:00");
+  return Date.now() >= unlock.getTime();
+}
+
+/* ============================================================
+   문항 데이터 — 회차별로 구성
+   type: 'blank'(빈칸) | 'predict'(실행결과예측) | 'code'(코드작성)
+   진단/형성평가/지연검사는 힌트 없음. 연습문제(1~3차시)만 hints 보유.
+   ============================================================ */
+const ITEMS = {
+  // ---- 1차시: 진단평가 8문항(최초 1회만) — 기출 스타일로 난이도 상향(v2) ----
+  diagnostic: [
+    { id:"D-V1", concept:"변수·자료형·연산자", type:"blank",
+      prompt:"문자열로 저장된 a를 정수로 변환한 뒤 몫과 나머지를 이용하여 10이 출력되도록 빈칸에 들어갈 식을 쓰시오.",
+      code:`a = "37"\nb = 4\nresult = ______________\nprint(result)`,
+      accept:["int(a) // b + int(a) % b", "int(a)//b+int(a)%b"] },
+    { id:"D-V2", concept:"변수·자료형·연산자", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`x = 17\ny = 5\nx = x % y + x // y\ny = x * 2 - y\nprint(x, y)`,
+      accept:["5 5"] },
+    { id:"D-C1", concept:"조건문", type:"blank",
+      prompt:"score가 82이고 attendance가 75일 때 '보충'이 출력되도록 ㉠에 들어갈 조건식을 쓰시오.",
+      code:`score = 82\nattendance = 75\nif ㉠:\n    print("통과")\nelif score >= 80:\n    print("보충")\nelse:\n    print("재평가")`,
+      accept:["score >= 80 and attendance >= 80", "attendance >= 80 and score >= 80", "score>=80 and attendance>=80", "attendance>=80 and score>=80"] },
+    { id:"D-C2", concept:"조건문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`score = 88\nproject = 72\nif score >= 80:\n    if project >= 80:\n        result = "A"\n    else:\n        result = "B"\nelif score >= 70:\n    result = "C"\nelse:\n    result = "D"\nprint(result)`,
+      accept:["B"] },
+    { id:"D-L1", concept:"반복문", type:"blank",
+      prompt:"20부터 10 이상까지 3씩 감소시키며 출력되도록 range()의 빈칸을 완성하시오. (세 값을 콤마와 공백으로 구분하여 순서대로 쓰시오. 예: 1, 2, 3)",
+      code:`for i in range(____, ____, ____):\n    print(i, end=" ")`,
+      accept:["20, 9, -3", "20,9,-3"] },
+    { id:"D-L2", concept:"반복문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`total = 0\nfor i in range(1, 8):\n    if i % 2 == 0:\n        continue\n    total += i\n    if total > 8:\n        break\nprint(total)`,
+      accept:["9"] },
+    { id:"D-F1", concept:"함수", type:"blank",
+      prompt:"함수의 실행 결과가 17이 되도록 ㉠에 들어갈 식을 쓰시오.",
+      code:`def calc(a, b):\n    return a * 2 + b\n\nx = calc(3, 4)\nprint(calc(x, ㉠))`,
+      accept:["-3"] },
+    { id:"D-F2", concept:"함수", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`def change(a, b=2):\n    a = a + b\n    return a * b\n\nx = change(3)\ny = change(x, 3)\nprint(x, y)`,
+      accept:["10 39"] },
+  ],
+
+  // ---- 1차시: 연습문제 4문항(변수·조건문) — 기출 스타일로 난이도 상향(v2) ----
+  round1_practice: [
+    { id:"R1-V-code", concept:"변수·자료형·연산자", type:"code",
+      prompt:"문자열로 저장된 전체 초 total_sec를 이용해 '2분 5초'가 출력되도록 코드를 작성하시오. 몫과 나머지 연산자를 모두 사용할 것.",
+      starter:`total_sec = "125"\n`,
+      expectedStdoutContains:"2분 5초",
+      hints:[
+        "input이나 문자열 형태의 숫자는 계산 전에 정수로 변환해야 해. 60으로 나눈 몫은 분, 나머지는 초가 돼.",
+        "정수로 바꾼 값을 sec에 저장한 뒤 sec // 60과 sec % 60을 각각 계산해 보자.",
+        "정답 형태: sec = int(total_sec)\nminute = sec // 60\nsecond = sec % 60\nprint(f\"{minute}분 {second}초\")"
+      ]},
+    { id:"R1-V-predict", concept:"변수·자료형·연산자", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`a = 29\nb = 6\na = a // b + a % b\nb = a * 2 - b\nprint(a, b)`,
+      accept:["9 12"],
+      hints:[
+        "오른쪽 식은 변경 전의 a 값을 이용해 먼저 계산한 뒤 왼쪽 변수에 저장돼.",
+        "29 // 6과 29 % 6을 먼저 구해 새 a를 만든 다음, 그 새 a로 b를 계산해.",
+        "29 // 6 = 4, 29 % 6 = 5이므로 a = 4 + 5 = 9가 되고, b = 9 * 2 - 6 = 12가 돼. 정답은 9 12야."
+      ]},
+    { id:"R1-C-code", concept:"조건문", type:"code",
+      prompt:"score와 attendance를 이용해 다음 기준으로 결과를 출력하는 코드를 작성하시오. score가 90 이상이고 attendance가 80 이상이면 '최우수', score가 80 이상이고 attendance가 70 이상이면 '통과', 그 외에는 '보충'을 출력한다.",
+      starter:`score = 88\nattendance = 76\n`,
+      expectedStdoutContains:"통과",
+      hints:[
+        "두 값이 모두 기준을 만족해야 하므로 각 단계에서 and를 사용해야 해.",
+        "더 높은 기준을 if에 먼저 쓰고, 다음 기준을 elif에 써야 첫 조건에 해당하는 학생이 아래 단계로 내려가지 않아.",
+        "정답 형태: if score >= 90 and attendance >= 80:\n    print(\"최우수\")\nelif score >= 80 and attendance >= 70:\n    print(\"통과\")\nelse:\n    print(\"보충\")"
+      ]},
+    { id:"R1-C-predict", concept:"조건문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`x = 75\ny = 85\nif x >= 80 or y >= 80:\n    if x + y >= 170:\n        print("A")\n    else:\n        print("B")\nelse:\n    print("C")`,
+      accept:["B"],
+      hints:[
+        "바깥 if의 or 조건부터 판단하고, 참일 때만 안쪽 if로 들어가.",
+        "x는 80 미만이지만 y는 80 이상이므로 바깥 조건은 참이야. 그다음 x + y를 계산해.",
+        "x + y는 160이므로 안쪽의 170 이상 조건은 거짓이라 정답은 B야."
+      ]},
+  ],
+
+  // ---- 2차시: 연습문제 4문항(반복문·함수) — 기출 스타일로 난이도 상향(v2) ----
+  round2_practice: [
+    { id:"R2-L-code", concept:"반복문", type:"code",
+      prompt:"1부터 30까지의 정수 중 3의 배수이면서 5의 배수는 아닌 수의 합을 출력하는 코드를 작성하시오.",
+      starter:`total = 0\n`,
+      expectedStdoutContains:"120",
+      hints:[
+        "1~30을 반복하면서 '3의 배수'와 '5의 배수가 아님'을 동시에 검사해야 해.",
+        "i % 3 == 0 and i % 5 != 0 인 경우에만 total에 i를 누적해.",
+        "정답 형태: for i in range(1, 31):\n    if i % 3 == 0 and i % 5 != 0:\n        total += i\nprint(total)"
+      ]},
+    { id:"R2-L-predict", concept:"반복문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`total = 0\nfor i in range(1, 10):\n    if i % 2 == 0:\n        continue\n    total += i\n    if total >= 16:\n        break\nprint(i, total)`,
+      accept:["7 16"],
+      hints:[
+        "짝수에서는 continue 때문에 아래 두 문장을 실행하지 않아. 홀수에서만 total이 변해.",
+        "홀수를 차례로 더하면서 total이 처음 16 이상이 되는 순간의 i를 찾아봐.",
+        "1, 3, 5까지 더하면 9이고, 다음 홀수 7을 더하면 16이 되어 break가 실행돼(반복이 끝난 뒤 print). 정답은 7 16이야."
+      ]},
+    { id:"R2-F-code", concept:"함수", type:"code",
+      prompt:"정수 n을 매개변수로 받아 1부터 n까지의 수 중 3의 배수의 합을 return하는 함수 sum_three를 작성하고, sum_three(10)의 결과를 출력하시오.",
+      starter:``,
+      expectedStdoutContains:"18",
+      hints:[
+        "함수 안에 누적 변수 total을 만들고 1부터 n까지 반복해야 해.",
+        "반복 중 i % 3 == 0인 경우에만 total에 더하고, 반복이 모두 끝난 뒤 return해.",
+        "정답 형태: def sum_three(n):\n    total = 0\n    for i in range(1, n + 1):\n        if i % 3 == 0:\n            total += i\n    return total\n\nprint(sum_three(10))"
+      ]},
+    { id:"R2-F-predict", concept:"함수", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`def calc(n):\n    if n % 2 == 0:\n        return n // 2\n    return n * 2 + 1\n\na = calc(7)\nb = calc(a)\nprint(a, b)`,
+      accept:["15 31"],
+      hints:[
+        "calc(7)의 반환값을 먼저 a에 저장하고, 그 a가 다시 calc의 입력이 돼.",
+        "7은 홀수이므로 첫 호출에서는 n * 2 + 1을 사용해. 두 번째 호출에서는 새 값의 홀짝을 다시 판단해.",
+        "첫 호출 결과는 15이고, 15도 홀수이므로 두 번째 결과는 15 * 2 + 1 = 31이야. 정답은 15 31."
+      ]},
+  ],
+
+  // ---- 3차시: 연습문제 4문항(통합·복습) — 기출 스타일로 난이도 상향(v2) ----
+  round3_practice: [
+    { id:"R3-V-code", concept:"변수·자료형·연산자", type:"code",
+      prompt:"세 자리 정수 n의 백의 자리, 십의 자리, 일의 자리를 각각 분리하여 한 줄에 출력하는 코드를 작성하시오. 문자열 변환은 사용하지 않는다.",
+      starter:`n = 583\n`,
+      expectedStdoutContains:"5 8 3",
+      hints:[
+        "백의 자리는 100으로 나눈 몫, 일의 자리는 10으로 나눈 나머지로 구할 수 있어.",
+        "십의 자리는 먼저 10으로 나눈 몫을 만든 뒤 다시 10으로 나눈 나머지를 구하면 돼.",
+        "정답 형태: hundred = n // 100\nten = (n // 10) % 10\none = n % 10\nprint(hundred, ten, one)"
+      ]},
+    { id:"R3-C-code", concept:"조건문", type:"code",
+      prompt:"score와 submit을 이용해 score가 80 이상이면서 submit이 True이면 '통과', score가 80 이상이지만 submit이 False이면 '미제출', 그 외에는 '재평가'를 출력하는 코드를 작성하시오.",
+      starter:`score = 86\nsubmit = False\n`,
+      expectedStdoutContains:"미제출",
+      hints:[
+        "점수 조건을 먼저 판단한 뒤, 그 안에서 제출 여부를 다시 판단하는 중첩 조건문으로 작성할 수 있어.",
+        "score >= 80이 참이면 submit의 참/거짓에 따라 '통과'와 '미제출'을 나눠.",
+        "정답 형태: if score >= 80:\n    if submit:\n        print(\"통과\")\n    else:\n        print(\"미제출\")\nelse:\n    print(\"재평가\")"
+      ]},
+    { id:"R3-L-predict", concept:"반복문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`count = 0\nfor i in range(1, 4):\n    for j in range(i):\n        count += i + j\nprint(count)`,
+      accept:["18"],
+      hints:[
+        "바깥 반복의 i 값마다 안쪽 range(i)의 j 값이 몇 개인지 따로 적어봐.",
+        "i=1일 때 j=0, i=2일 때 j=0,1, i=3일 때 j=0,1,2야. 각 경우 i+j를 누적해.",
+        "누적되는 값은 1, 2, 3, 3, 4, 5이고 이 값을 모두 더하면 18이야."
+      ]},
+    { id:"R3-F-predict", concept:"함수", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`def outer(x):\n    def inner(y):\n        return y + 2\n    return inner(x) * inner(x - 1)\n\nprint(outer(3))`,
+      accept:["20"],
+      hints:[
+        "outer 안에서 inner가 두 번 호출돼. 각 호출의 반환값을 따로 구해.",
+        "inner(3)과 inner(2)의 결과를 구한 뒤 두 값을 곱해.",
+        "inner(3)은 5, inner(2)는 4를 반환하므로 5 * 4 = 20이야."
+      ]},
+  ],
+
+  // ---- 3차시: 형성평가(즉시 사후) 8문항 — 힌트 없음, 기출 스타일로 난이도 상향(v2) ----
+  round3_posttest: [
+    { id:"R3P-V1", concept:"변수·자료형·연산자", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`a = 47\nb = 6\na = a // b + a % b\nb = a - b\nprint(a, b)`,
+      accept:["12 6"] },
+    { id:"R3P-C1", concept:"조건문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`score = 84\nattendance = 68\nif score >= 80 and attendance >= 80:\n    print("A")\nelif score >= 80 or attendance >= 80:\n    print("B")\nelse:\n    print("C")`,
+      accept:["B"] },
+    { id:"R3P-L1", concept:"반복문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`total = 0\nfor i in range(1, 9):\n    if i % 3 == 0:\n        continue\n    total += i\n    if total > 15:\n        break\nprint(i, total)`,
+      accept:["7 19"] },
+    { id:"R3P-F1", concept:"함수", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`def f(n):\n    if n % 2 == 0:\n        return n // 2\n    return n + 3\n\na = f(5)\nb = f(a)\nprint(a, b)`,
+      accept:["8 4"] },
+    { id:"R3P-V2", concept:"변수·자료형·연산자", type:"code",
+      prompt:"세 자리 정수 n의 각 자리 숫자의 합을 출력하는 코드를 작성하시오. 문자열 변환은 사용하지 않는다.",
+      starter:`n = 472\n`,
+      expectedStdoutContains:"13" },
+    { id:"R3P-C2", concept:"조건문", type:"code",
+      prompt:"score가 90 이상이면 'A', 80 이상이면 'B', 그 미만이면서 project가 90 이상이면 'C', 그 외에는 'D'를 출력하는 코드를 작성하시오.",
+      starter:`score = 76\nproject = 95\n`,
+      expectedStdoutContains:"C" },
+    { id:"R3P-L2", concept:"반복문", type:"code",
+      prompt:"1부터 20까지의 정수 중 2의 배수이지만 3의 배수는 아닌 수의 합을 출력하는 코드를 작성하시오.",
+      starter:`total = 0\n`,
+      expectedStdoutContains:"74" },
+    { id:"R3P-F2", concept:"함수", type:"code",
+      prompt:"정수 n을 받아 1부터 n까지 홀수의 합을 return하는 함수 odd_sum을 작성하고, odd_sum(9)의 결과를 출력하시오.",
+      starter:``,
+      expectedStdoutContains:"25" },
+  ],
+
+  // ---- 4차시(2주 후): 지연검사 8문항 — 힌트 없음, 기출 스타일 평행형(v2) ----
+  round4_posttest: [
+    { id:"R4P-V1", concept:"변수·자료형·연산자", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`a = 53\nb = 7\na = a % b + a // b\nb = a + b\nprint(a, b)`,
+      accept:["11 18"] },
+    { id:"R4P-C1", concept:"조건문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오.",
+      code:`x = 78\ny = 92\nif x >= 80 and y >= 80:\n    print("A")\nelif x >= 80 or y >= 80:\n    print("B")\nelse:\n    print("C")`,
+      accept:["B"] },
+    { id:"R4P-L1", concept:"반복문", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`total = 0\nfor i in range(2, 11):\n    if i % 4 == 0:\n        continue\n    total += i\n    if total >= 24:\n        break\nprint(i, total)`,
+      accept:["9 32"] },
+    { id:"R4P-F1", concept:"함수", type:"predict",
+      prompt:"다음 코드의 실행 결과를 쓰시오. (두 값을 공백으로 구분)",
+      code:`def change(n):\n    if n > 10:\n        return n - 4\n    return n * 2\n\na = change(8)\nb = change(a)\nprint(a, b)`,
+      accept:["16 12"] },
+    { id:"R4P-V2", concept:"변수·자료형·연산자", type:"code",
+      prompt:"세 자리 정수 n의 백의 자리와 일의 자리의 곱에 십의 자리를 더한 값을 출력하는 코드를 작성하시오. 문자열 변환은 사용하지 않는다.",
+      starter:`n = 634\n`,
+      expectedStdoutContains:"27" },
+    { id:"R4P-C2", concept:"조건문", type:"code",
+      prompt:"score가 85 이상이고 task가 80 이상이면 '우수', 둘 중 하나만 80 이상이면 '보통', 둘 다 80 미만이면 '보충'을 출력하는 코드를 작성하시오.",
+      starter:`score = 88\ntask = 76\n`,
+      expectedStdoutContains:"보통" },
+    { id:"R4P-L2", concept:"반복문", type:"code",
+      prompt:"1부터 25까지의 정수 중 4의 배수 또는 6의 배수인 수의 합을 출력하는 코드를 작성하시오. 같은 수를 두 번 더하지 않도록 한다.",
+      starter:`total = 0\n`,
+      expectedStdoutContains:"108" },
+    { id:"R4P-F2", concept:"함수", type:"code",
+      prompt:"정수 n을 받아 1부터 n까지 3의 배수가 아닌 수의 합을 return하는 함수 except_three를 작성하고, except_three(10)의 결과를 출력하시오.",
+      starter:``,
+      expectedStdoutContains:"37" },
+  ],
+};
+
+const PRACTICE_ROUNDS = {
+  1: { items: ITEMS.round1_practice, label:"연습문제 (1차시)", title:"연습문제 1차시" },
+  2: { items: ITEMS.round2_practice, label:"연습문제 (2차시)", title:"연습문제 2차시" },
+  3: { items: ITEMS.round3_practice, label:"연습문제 (3차시)", title:"연습문제 3차시" },
+};
+
+/* ============================================================
+   상태
+   ============================================================ */
+let state = {
+  studentNo:"", name:"", condition:"", diagnosticTier:"",
+  itemShownAt:0,
+};
+let sessionStartAt = Date.now();
+let timerInterval = null;
+
+function startTimer(){
+  if(timerInterval) return;
+  timerInterval = setInterval(()=>{
+    const sec = Math.floor((Date.now()-sessionStartAt)/1000);
+    const m = String(Math.floor(sec/60)).padStart(2,"0");
+    const s = String(sec%60).padStart(2,"0");
+    document.getElementById("timerDisplay").textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(el=>el.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function normalize(s){
+  return (s||"").trim().replace(/\s+/g," ");
+}
+
+/* ============================================================
+   공용 확인 팝업 — askConfirm("메시지").then(ok => ...)
+   ============================================================ */
+function askConfirm(message){
+  return new Promise((resolve)=>{
+    document.getElementById("confirmMessage").textContent = message;
+    const overlay = document.getElementById("confirmOverlay");
+    const okBtn = document.getElementById("confirmOkBtn");
+    const cancelBtn = document.getElementById("confirmCancelBtn");
+    overlay.classList.add("active");
+    function cleanup(result){
+      overlay.classList.remove("active");
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+  });
+}
+
+/* ============================================================
+   로그인 / 등록 / 다음 단계로 라우팅
+   ============================================================ */
+document.getElementById("btnStart").addEventListener("click", async ()=>{
+  const studentNo = normalize(document.getElementById("inputStudentNo").value);
+  const name = normalize(document.getElementById("inputName").value);
+  const errEl = document.getElementById("loginError");
+  errEl.textContent = "";
+  if(!studentNo || !name){
+    errEl.textContent = "학번과 이름을 모두 입력해 주세요.";
+    return;
+  }
+  document.getElementById("btnStart").disabled = true;
+  document.getElementById("btnStart").textContent = "확인 중...";
+
+  try{
+    const { data: regData, error: regErr } = await db.rpc("register_student", { p_student_no: studentNo, p_name: name });
+    if(regErr) throw regErr;
+    state.studentNo = studentNo;
+    state.name = name;
+    state.condition = regData?.[0]?.out_condition || "no_hint";
+
+    const { data: stepData, error: stepErr } = await db.rpc("get_next_step", { p_student_no: studentNo, p_name: name });
+    if(stepErr) throw stepErr;
+    const row = stepData?.[0] || {};
+    if(row.out_diagnostic_tier) state.diagnosticTier = row.out_diagnostic_tier;
+
+    startTimer();
+    goToStep(row.out_next_step || "diagnostic");
+  }catch(e){
+    console.error(e);
+    errEl.textContent = "접속에 문제가 생겼어요. 선생님께 알려주세요. (" + (e.message||e) + ")";
+    document.getElementById("btnStart").disabled = false;
+    document.getElementById("btnStart").textContent = "시작하기";
+  }
+});
+
+function goToStep(step){
+  switch(step){
+    case "diagnostic":
+      startQuiz(ITEMS.diagnostic, {
+        phase:"diagnostic", round_no:1, withHints:false, label:"진단평가 (1차시)",
+        onComplete: async (correctCount)=>{
+          const tier = correctCount >= 7 ? "상" : (correctCount >= 4 ? "중" : "하");
+          state.diagnosticTier = tier;
+          try{
+            await db.rpc("set_diagnostic_result", { p_student_no: state.studentNo, p_name: state.name, p_score: correctCount, p_tier: tier });
+          }catch(e){ console.error("진단결과 저장 실패", e); }
+          enterPracticeIntro(1);
+        }
+      });
+      break;
+    case "round1_practice": enterPracticeIntro(1); break;
+    case "round1_reflection": enterCheckin(1); break;
+    case "round2_practice": enterPracticeIntro(2); break;
+    case "round2_reflection": enterCheckin(2); break;
+    case "round3_practice": enterPracticeIntro(3); break;
+    case "round3_posttest": startRound3Posttest(); break;
+    case "round3_reflection": showScreen("screen-reflection"); prepReflection3(); break;
+    case "round4_posttest":
+      if(!isRound4Unlocked()){ showRound4Locked(); return; }
+      startRound4Posttest();
+      break;
+    case "round4_reflection":
+      if(!isRound4Unlocked()){ showRound4Locked(); return; }
+      showScreen("screen-reflection4");
+      break;
+    case "done":
+      showScreen("screen-already");
+      break;
+    default:
+      showScreen("screen-already");
+  }
+}
+
+function showRound4Locked(){
+  const unlock = new Date(ROUND4_UNLOCK_DATE + "T00:00:00");
+  const label = `${unlock.getFullYear()}년 ${unlock.getMonth()+1}월 ${unlock.getDate()}일`;
+  document.getElementById("round4LockedText").textContent = `1~3차시는 모두 마쳤어요. 4차시(지연검사)는 ${label}부터 시작할 수 있어요.`;
+  showScreen("screen-round4-locked");
+}
+
+/* ============================================================
+   공통: 문항 렌더러 (buildItemDOM) — 진단/연습/사후 전부 이걸 사용
+   ============================================================ */
+function buildItemDOM(item, {withHints=false} = {}){
+  const box = document.createElement("div");
+  box.innerHTML = `
+    <span class="tag beige">${item.concept}</span>
+    <p style="margin:14px 0 10px; font-size:15px; line-height:1.6;">${item.prompt}</p>
+    ${item.code ? `<pre class="code-block">${item.code}</pre>` : ""}
+  `;
+
+  let inputEl;
+  if(item.type === "code"){
+    inputEl = document.createElement("textarea");
+    inputEl.className = "code-editor";
+    inputEl.value = item.starter || "";
+    box.appendChild(inputEl);
+
+    const runBtn = document.createElement("button");
+    runBtn.className = "btn-ghost";
+    runBtn.style.marginTop = "10px";
+    runBtn.textContent = "실행해서 확인하기";
+    box.appendChild(runBtn);
+
+    const fb = document.createElement("div");
+    fb.className = "feedback";
+    box.appendChild(fb);
+
+    box._run = async ()=>{
+      runBtn.disabled = true;
+      runBtn.textContent = "실행 중...";
+      const result = await runPythonCode(inputEl.value);
+      runBtn.disabled = false;
+      runBtn.textContent = "다시 실행하기";
+      if(!result.ok){
+        fb.className = "feedback no";
+        fb.textContent = "코드에 오류가 있어요: " + result.output;
+        box._lastCorrect = null;
+      } else {
+        const passed = result.output.includes(item.expectedStdoutContains);
+        fb.className = "feedback " + (passed ? "ok" : "no");
+        fb.textContent = (passed ? "✅ 정답이에요!" : "❌ 다시 확인해보세요.") + "\n실행 결과: " + result.output.trim();
+        box._lastCorrect = passed;
+      }
+      box._lastAnswer = inputEl.value;
+      box._answered = true;
+      onItemAnswered();
+    };
+    runBtn.addEventListener("click", box._run);
+    inputEl.addEventListener("input", ()=>{
+      if(box._answered){
+        box._answered = false;
+        box._lastCorrect = null;
+        fb.className = "feedback";
+        fb.textContent = "";
+        runBtn.textContent = "실행해서 확인하기";
+        onItemAnswered();
+      }
+    });
+    box._getAnswer = ()=> inputEl.value;
+  } else {
+    inputEl = document.createElement("input");
+    inputEl.type = "text";
+    inputEl.placeholder = "답을 입력하세요";
+    inputEl.style.marginTop = "12px";
+    inputEl.addEventListener("input", ()=>{
+      box._answered = normalize(inputEl.value).length > 0;
+      box._lastAnswer = inputEl.value;
+      box._lastCorrect = item.accept.includes(normalize(inputEl.value));
+      onItemAnswered();
+    });
+    box.appendChild(inputEl);
+    box._getAnswer = ()=> inputEl.value;
+  }
+
+  if(withHints){
+    const hintBox = document.createElement("div");
+    hintBox.className = "hint-box";
+    box.appendChild(hintBox);
+    box._hintBox = hintBox;
+
+    if(state.condition === "self_hint" && item.hints){
+      const hintBtn = document.createElement("button");
+      hintBtn.className = "btn-ghost";
+      hintBtn.style.marginTop = "12px";
+      hintBtn.textContent = "힌트 보기";
+      let tier = 0;
+      hintBtn.addEventListener("click", async ()=>{
+        if(tier >= item.hints.length) return;
+        const nextTierNum = tier + 1;
+        if(nextTierNum === 3){
+          hintBtn.disabled = true;
+          const ok = await askConfirm("3단계는 정답 확인입니다. 확인하시겠습니까?");
+          hintBtn.disabled = false;
+          if(!ok) return;
+        }
+        hintBox.style.display = "block";
+        hintBox.textContent = (hintBox.textContent ? hintBox.textContent + "\n\n" : "") + `[힌트 ${nextTierNum}] ` + item.hints[tier];
+        const now = Date.now();
+        const elapsedSec = Math.round((now - state.itemShownAt)/1000);
+        if(nextTierNum === 1) box._hintTier1Sec = elapsedSec;
+        else if(nextTierNum === 2) box._hintTier2Sec = elapsedSec;
+        else if(nextTierNum === 3) box._hintTier3Sec = elapsedSec;
+        tier++;
+        box._hintTierUsed = tier;
+        box._hintViewCount = (box._hintViewCount||0) + 1;
+        if(!box._hintFirstViewAt) box._hintFirstViewAt = now;
+        box._hintLastViewAt = now;
+        hintBtn.textContent = tier < item.hints.length ? "다음 힌트 보기" : "모든 힌트를 확인했어요";
+        if(tier >= item.hints.length) hintBtn.disabled = true;
+      });
+      box.appendChild(hintBtn);
+    }
+
+    if(state.condition === "auto_hint" && item.hints){
+      const tierMap = { "상":1, "중":2, "하":3 };
+      const tier = tierMap[state.diagnosticTier] || 2;
+      const shownTier = Math.min(tier, item.hints.length);
+      hintBox.style.display = "block";
+      hintBox.textContent = `[맞춤 힌트] ` + item.hints[shownTier - 1];
+      box._hintTierUsed = shownTier;
+      box._hintViewCount = 1;
+      box._hintFirstViewAt = Date.now();
+      box._hintLastViewAt = box._hintFirstViewAt;
+      if(shownTier === 1) box._hintTier1Sec = 0;
+      else if(shownTier === 2) box._hintTier2Sec = 0;
+      else if(shownTier === 3) box._hintTier3Sec = 0;
+    }
+
+    if(state.condition === "ai_open"){
+      const aiBox = document.createElement("div");
+      aiBox.className = "ai-box";
+      aiBox.innerHTML = `<p>이 문제는 AI를 자유롭게 활용해도 좋아요. 무엇을 물어봤는지, 어떤 도움을 받았는지 간단히 남겨주세요.</p>`;
+      const aiLinkBtn = document.createElement("button");
+      aiLinkBtn.className = "btn-ghost";
+      aiLinkBtn.textContent = "새 탭에서 AI 열기";
+      aiLinkBtn.addEventListener("click", ()=>{
+        window.open("https://claude.ai", "_blank");
+        box._aiUsed = true;
+      });
+      const aiNote = document.createElement("textarea");
+      aiNote.className = "prose";
+      aiNote.placeholder = "예: '할인가 계산할 때 int()를 왜 쓰는지 물어봤어요'";
+      aiNote.style.marginTop = "10px";
+      aiNote.addEventListener("input", ()=>{ box._aiNotes = aiNote.value; if(aiNote.value.trim()) box._aiUsed = true; });
+      aiBox.appendChild(aiLinkBtn);
+      aiBox.appendChild(aiNote);
+      box.appendChild(aiBox);
+    }
+  }
+
+  return box;
+}
+
+async function runPythonCode(code){
+  try{
+    await ensurePyodide();
+    let output = "";
+    window._pyodide.setStdout({ batched: (s)=>{ output += s + "\n"; } });
+    await window._pyodide.runPythonAsync(code);
+    return { ok:true, output };
+  }catch(e){
+    return { ok:false, output: String(e).slice(0,300) };
+  }
+}
+
+let pyodideLoading = null;
+function ensurePyodide(){
+  if(window._pyodide) return Promise.resolve(window._pyodide);
+  if(pyodideLoading) return pyodideLoading;
+  pyodideLoading = new Promise((resolve, reject)=>{
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+    script.onload = async ()=>{
+      try{
+        window._pyodide = await loadPyodide();
+        resolve(window._pyodide);
+      }catch(e){ reject(e); }
+    };
+    script.onerror = ()=> reject(new Error("Pyodide 로드 실패"));
+    document.head.appendChild(script);
+  });
+  return pyodideLoading;
+}
+
+/* ============================================================
+   범용 퀴즈 엔진 (진단 / 연습 1·2·3차시 / 형성평가 / 지연검사 공용)
+   ============================================================ */
+let quiz = { items:[], idx:0, phase:"", round_no:1, withHints:false, correctCount:0, onComplete:null };
+let quizBox = null;
+
+function startQuiz(items, opts){
+  quiz = { items, idx:0, phase:opts.phase, round_no:opts.round_no, withHints:!!opts.withHints, correctCount:0, onComplete:opts.onComplete };
+  document.getElementById("quizTag").textContent = opts.label;
+  showScreen("screen-quiz");
+  renderQuizItem();
+}
+
+function renderQuizItem(){
+  const item = quiz.items[quiz.idx];
+  document.getElementById("quizProgressTag").textContent = `${quiz.idx+1} / ${quiz.items.length}`;
+  document.getElementById("quizProgressFill").style.width = `${((quiz.idx+1)/quiz.items.length)*100}%`;
+  const area = document.getElementById("quizItemArea");
+  area.innerHTML = "";
+  state.itemShownAt = Date.now();
+  quizBox = buildItemDOM(item, { withHints: quiz.withHints });
+  area.appendChild(quizBox);
+  document.getElementById("quizNextBtn").disabled = true;
+}
+
+function onItemAnswered(){
+  if(document.getElementById("screen-quiz").classList.contains("active")){
+    document.getElementById("quizNextBtn").disabled = !quizBox._answered;
+  }
+}
+
+document.getElementById("quizNextBtn").addEventListener("click", async ()=>{
+  const item = quiz.items[quiz.idx];
+  const answer = quizBox._getAnswer();
+  const correct = item.type === "code" ? quizBox._lastCorrect : item.accept.includes(normalize(answer));
+  if(correct) quiz.correctCount++;
+  const submitAt = Date.now();
+  await saveResponse({
+    round_no: quiz.round_no, phase: quiz.phase, item_id:item.id, submitted_answer:answer, is_correct:correct,
+    hint_tier_used: quizBox._hintTierUsed || 0,
+    hint_view_count: quizBox._hintViewCount || 0,
+    ai_used: !!quizBox._aiUsed, ai_notes: quizBox._aiNotes || null,
+    time_spent_sec: Math.round((submitAt-state.itemShownAt)/1000),
+    hint_first_view_sec: quizBox._hintFirstViewAt ? Math.round((quizBox._hintFirstViewAt - state.itemShownAt)/1000) : null,
+    hint_last_view_sec: quizBox._hintLastViewAt ? Math.round((quizBox._hintLastViewAt - state.itemShownAt)/1000) : null,
+    time_after_hint_sec: quizBox._hintLastViewAt ? Math.round((submitAt - quizBox._hintLastViewAt)/1000) : null,
+    hint_tier1_sec: quizBox._hintTier1Sec ?? null,
+    hint_tier2_sec: quizBox._hintTier2Sec ?? null,
+    hint_tier3_sec: quizBox._hintTier3Sec ?? null
+  });
+  quiz.idx++;
+  if(quiz.idx < quiz.items.length){
+    renderQuizItem();
+  } else {
+    quiz.onComplete(quiz.correctCount);
+  }
+});
+
+/* ============================================================
+   연습문제 안내 → 시작 (1·2·3차시 공용)
+   ============================================================ */
+function enterPracticeIntro(roundNo){
+  state.currentPracticeRound = roundNo;
+  const texts = {
+    no_hint: "이번 연습문제는 힌트 없이 스스로 풀어보는 문제예요. 어려워도 끝까지 고민해서 풀어보세요.",
+    auto_hint: "이번 연습문제는 여러분의 수준에 맞는 힌트가 문제 아래 자동으로 함께 제공돼요.",
+    self_hint: "이번 연습문제는 막힐 때 '힌트 보기' 버튼을 눌러 도움을 받을 수 있어요.",
+    ai_open: "이번 연습문제는 AI 도우미를 자유롭게 활용해도 좋아요."
+  };
+  document.getElementById("practiceIntroTitle").textContent = PRACTICE_ROUNDS[roundNo].title;
+  document.getElementById("practiceIntroText").textContent = texts[state.condition] || texts.no_hint;
+  showScreen("screen-practice-intro");
+}
+
+document.getElementById("btnPracticeStart").addEventListener("click", ()=>{
+  const roundNo = state.currentPracticeRound;
+  const cfg = PRACTICE_ROUNDS[roundNo];
+  startQuiz(cfg.items, {
+    phase:"practice", round_no: roundNo, withHints:true, label: cfg.label,
+    onComplete: ()=>{
+      if(roundNo === 1){
+        showRoundDone(1, "1차시를 마쳤어요!", "잠시 후 체크인 질문에 답해주세요.");
+        setTimeout(()=> enterCheckin(1), 900);
+      } else if(roundNo === 2){
+        showRoundDone(2, "2차시를 마쳤어요!", "잠시 후 체크인 질문에 답해주세요.");
+        setTimeout(()=> enterCheckin(2), 900);
+      } else {
+        startRound3Posttest();
+      }
+    }
+  });
+});
+
+function showRoundDone(roundNo, title, text){
+  document.getElementById("roundDoneTitle").textContent = title;
+  document.getElementById("roundDoneText").textContent = text;
+  showScreen("screen-round-done");
+}
+
+function startRound3Posttest(){
+  startQuiz(ITEMS.round3_posttest, {
+    phase:"posttest", round_no:3, withHints:false, label:"형성평가 (3차시)",
+    onComplete: ()=>{ showScreen("screen-reflection"); prepReflection3(); }
+  });
+}
+
+function startRound4Posttest(){
+  startQuiz(ITEMS.round4_posttest, {
+    phase:"posttest", round_no:4, withHints:false, label:"지연검사 (4차시)",
+    onComplete: ()=>{ showScreen("screen-reflection4"); }
+  });
+}
+
+/* ============================================================
+   짧은 체크인(1·2차시)
+   ============================================================ */
+let checkinScaleVal = null;
+let checkinRound = 1;
+
+function enterCheckin(roundNo){
+  checkinRound = roundNo;
+  checkinScaleVal = null;
+  document.getElementById("checkinTag").textContent = `${roundNo}차시 체크인`;
+  document.getElementById("checkinQ1").value = "";
+  document.getElementById("checkinScaleReason").value = "";
+  document.querySelectorAll("#checkinScale .scale-btn").forEach(b=>b.classList.remove("selected"));
+  document.getElementById("btnCheckinSubmit").disabled = true;
+  showScreen("screen-checkin");
+}
+
+document.querySelectorAll("#checkinScale .scale-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#checkinScale .scale-btn").forEach(b=>b.classList.remove("selected"));
+    btn.classList.add("selected");
+    checkinScaleVal = parseInt(btn.dataset.val, 10);
+    checkReadyCheckin();
+  });
+});
+["checkinQ1","checkinScaleReason"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", checkReadyCheckin);
+});
+function checkReadyCheckin(){
+  const filled = ["checkinQ1","checkinScaleReason"].every(id => normalize(document.getElementById(id).value).length > 0);
+  document.getElementById("btnCheckinSubmit").disabled = !(filled && checkinScaleVal);
+}
+
+document.getElementById("btnCheckinSubmit").addEventListener("click", async ()=>{
+  const btn = document.getElementById("btnCheckinSubmit");
+  btn.disabled = true;
+  btn.textContent = "제출 중...";
+  try{
+    await db.from("reflections").upsert({
+      student_no: state.studentNo,
+      round_no: checkinRound,
+      condition: state.condition,
+      q_practice_feel: document.getElementById("checkinQ1").value,
+      satisfaction_scale: checkinScaleVal,
+      satisfaction_reason: document.getElementById("checkinScaleReason").value
+    }, { onConflict: "student_no,round_no" });
+  }catch(e){ console.error("체크인 저장 실패", e); }
+  btn.textContent = "제출하기";
+
+  if(checkinRound === 1){
+    showRoundDone(1, "1차시 완료!", "다음 차시에서 또 만나요.");
+  } else {
+    showRoundDone(2, "2차시 완료!", "다음 차시에서 또 만나요.");
+  }
+});
+
+/* ============================================================
+   종합 성찰(3차시) — 조건별 맞춤 질문 포함
+   ============================================================ */
+const REFLECTION_Q3 = {
+  no_hint: "③ 1~3차시 동안 힌트 없이 스스로 문제를 풀었어요. 막히는 순간에는 어떻게 해결하려고 했나요?",
+  auto_hint: "③ 문제 아래 자동으로 나온 힌트가 이해하는 데 어떤 도움이 되었나요? (오히려 방해가 됐다면 그것도 적어주세요)",
+  self_hint: "③ 힌트를 직접 눌러서 확인했는데, 어떤 순간에 힌트를 보기로 했나요? 힌트가 도움이 되었나요?",
+  ai_open: "③ AI에게 무엇을 물어봤고, AI의 답변이 이해하는 데 어떻게 도움이 되었나요? (도움이 안 됐다면 그 이유도 적어주세요)"
+};
+const REFLECTION_Q3_PLACEHOLDER = {
+  no_hint: "예: 코드를 한 줄씩 다시 읽으면서 어디서 막혔는지 찾아봤어요.",
+  auto_hint: "예: 자동으로 나온 힌트를 보고 나서야 왜 int()가 필요한지 이해했어요.",
+  self_hint: "예: 두 번째 시도에서도 안 풀려서 힌트를 눌러봤어요. 첫 번째 힌트만으로 충분했어요.",
+  ai_open: "예: '왜 이 코드가 안 되는지' 물어봤고, 어떤 부분이 틀렸는지 짚어줘서 도움이 됐어요."
+};
+let reflectionScale = null;
+
+function prepReflection3(){
+  reflectionScale = null;
+  document.getElementById("refQ1").value = "";
+  document.getElementById("refQ2").value = "";
+  document.getElementById("refQ3").value = "";
+  document.getElementById("refQ4").value = "";
+  document.getElementById("refScaleReason").value = "";
+  document.querySelectorAll("#refScale .scale-btn").forEach(b=>b.classList.remove("selected"));
+  document.getElementById("refQ3Label").textContent = REFLECTION_Q3[state.condition] || REFLECTION_Q3.no_hint;
+  document.getElementById("refQ3").placeholder = REFLECTION_Q3_PLACEHOLDER[state.condition] || "";
+  checkReflectionReady();
+}
+
+document.querySelectorAll("#refScale .scale-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#refScale .scale-btn").forEach(b=>b.classList.remove("selected"));
+    btn.classList.add("selected");
+    reflectionScale = parseInt(btn.dataset.val, 10);
+    checkReflectionReady();
+  });
+});
+["refQ1","refQ2","refQ3","refQ4","refScaleReason"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", checkReflectionReady);
+});
+function checkReflectionReady(){
+  const filled = ["refQ1","refQ2","refQ3","refQ4","refScaleReason"].every(id => normalize(document.getElementById(id).value).length > 0);
+  document.getElementById("btnReflectionSubmit").disabled = !(filled && reflectionScale);
+}
+
+document.getElementById("btnReflectionSubmit").addEventListener("click", async ()=>{
+  const btn = document.getElementById("btnReflectionSubmit");
+  btn.disabled = true;
+  btn.textContent = "제출 중...";
+  try{
+    await db.from("reflections").upsert({
+      student_no: state.studentNo,
+      round_no: 3,
+      condition: state.condition,
+      q_practice_feel: document.getElementById("refQ1").value,
+      q_posttest_link: document.getElementById("refQ2").value,
+      q_condition_specific: document.getElementById("refQ3").value,
+      q_strategy_change: document.getElementById("refQ4").value,
+      satisfaction_scale: reflectionScale,
+      satisfaction_reason: document.getElementById("refScaleReason").value
+    }, { onConflict: "student_no,round_no" });
+  }catch(e){ console.error("성찰 저장 실패", e); }
+  showRoundDone(3, "1~3차시를 모두 마쳤어요!", `4차시(지연검사)는 ${ROUND4_UNLOCK_DATE}부터 같은 링크로 다시 접속하면 진행할 수 있어요.`);
+});
+
+/* ============================================================
+   4차시 최종 성찰(회고형)
+   ============================================================ */
+let reflection4Scale = null;
+
+document.querySelectorAll("#ref4Scale .scale-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#ref4Scale .scale-btn").forEach(b=>b.classList.remove("selected"));
+    btn.classList.add("selected");
+    reflection4Scale = parseInt(btn.dataset.val, 10);
+    checkReflection4Ready();
+  });
+});
+["ref4Q1","ref4Q2","ref4ScaleReason"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", checkReflection4Ready);
+});
+function checkReflection4Ready(){
+  const filled = ["ref4Q1","ref4Q2","ref4ScaleReason"].every(id => normalize(document.getElementById(id).value).length > 0);
+  document.getElementById("btnReflection4Submit").disabled = !(filled && reflection4Scale);
+}
+
+document.getElementById("btnReflection4Submit").addEventListener("click", async ()=>{
+  const btn = document.getElementById("btnReflection4Submit");
+  btn.disabled = true;
+  btn.textContent = "제출 중...";
+  try{
+    await db.from("reflections").upsert({
+      student_no: state.studentNo,
+      round_no: 4,
+      condition: state.condition,
+      q_practice_feel: document.getElementById("ref4Q1").value,
+      q_posttest_link: document.getElementById("ref4Q2").value,
+      satisfaction_scale: reflection4Scale,
+      satisfaction_reason: document.getElementById("ref4ScaleReason").value
+    }, { onConflict: "student_no,round_no" });
+  }catch(e){ console.error("4차시 성찰 저장 실패", e); }
+  clearInterval(timerInterval);
+  showScreen("screen-done");
+});
+
+/* ============================================================
+   저장
+   ============================================================ */
+async function saveResponse(fields){
+  try{
+    await db.from("responses").upsert({
+      student_no: state.studentNo,
+      ...fields
+    }, { onConflict: "student_no,item_id" });
+  }catch(e){
+    console.error("저장 실패", e);
+  }
+}
+
+/* ============================================================
+   교사용 화면 — 비밀번호는 schema.sql의 check_teacher_password 함수 안에만
+   저장되어 있으며, 이 파일에는 들어있지 않습니다.
+   ============================================================ */
+let teacherPassword = "";
+let teacherData = { students: [], responses: [], reflections: [] };
+
+document.getElementById("btnTeacherLink").addEventListener("click", ()=>{
+  document.getElementById("inputTeacherPw").value = "";
+  document.getElementById("teacherLoginError").textContent = "";
+  showScreen("screen-teacher-login");
+});
+document.getElementById("btnTeacherBack").addEventListener("click", ()=>{
+  showScreen("screen-login");
+});
+document.getElementById("btnTeacherLogout").addEventListener("click", ()=>{
+  teacherPassword = "";
+  teacherData = { students: [], responses: [], reflections: [] };
+  showScreen("screen-login");
+});
+
+document.getElementById("btnTeacherLogin").addEventListener("click", async ()=>{
+  const pw = document.getElementById("inputTeacherPw").value;
+  const errEl = document.getElementById("teacherLoginError");
+  errEl.textContent = "";
+  const btn = document.getElementById("btnTeacherLogin");
+  btn.disabled = true;
+  btn.textContent = "확인 중...";
+  try{
+    const { data, error } = await db.rpc("teacher_get_students", { p_password: pw });
+    if(error) throw error;
+    teacherPassword = pw;
+    teacherData.students = data || [];
+    await loadTeacherDashboard();
+  }catch(e){
+    errEl.textContent = "비밀번호가 올바르지 않습니다.";
+  }
+  btn.disabled = false;
+  btn.textContent = "확인";
+});
+
+document.getElementById("btnTeacherRefresh").addEventListener("click", loadTeacherDashboard);
+
+async function loadTeacherDashboard(){
+  document.getElementById("teacherSummaryText").textContent = "불러오는 중...";
+  try{
+    const [sRes, rRes, fRes] = await Promise.all([
+      db.rpc("teacher_get_students", { p_password: teacherPassword }),
+      db.rpc("teacher_get_responses", { p_password: teacherPassword }),
+      db.rpc("teacher_get_reflections", { p_password: teacherPassword })
+    ]);
+    if(sRes.error || rRes.error || fRes.error) throw (sRes.error || rRes.error || fRes.error);
+    teacherData.students = sRes.data || [];
+    teacherData.responses = rRes.data || [];
+    teacherData.reflections = fRes.data || [];
+    renderTeacherDashboard();
+    showScreen("screen-teacher-dashboard");
+  }catch(e){
+    console.error("교사 데이터 불러오기 실패", e);
+    document.getElementById("teacherSummaryText").textContent = "데이터를 불러오지 못했습니다. 새로고침을 눌러 다시 시도해주세요.";
+  }
+}
+
+const CONDITION_LABEL = { no_hint:"힌트없음", auto_hint:"자동힌트", self_hint:"자기선택힌트", ai_open:"AI자유" };
+
+function computeStudentProgress(studentNo){
+  const resp = teacherData.responses.filter(r=>r.student_no===studentNo);
+  const refl = teacherData.reflections.filter(r=>r.student_no===studentNo);
+  const cnt = (round_no, phase) => resp.filter(r=>r.round_no===round_no && r.phase===phase).length;
+  const hasRefl = (round_no) => refl.some(r=>r.round_no===round_no);
+  if(cnt(1,"diagnostic") < 1) return "진단평가 전";
+  if(cnt(1,"practice") < 4) return "1차시 연습 중";
+  if(!hasRefl(1)) return "1차시 체크인 전";
+  if(cnt(2,"practice") < 4) return "2차시 연습 중";
+  if(!hasRefl(2)) return "2차시 체크인 전";
+  if(cnt(3,"practice") < 4) return "3차시 연습 중";
+  if(cnt(3,"posttest") < 8) return "3차시 형성평가 중";
+  if(!hasRefl(3)) return "3차시 성찰 전";
+  if(cnt(4,"posttest") < 8) return "4차시 대기/진행 중";
+  if(!hasRefl(4)) return "4차시 성찰 전";
+  return "전체 완료";
+}
+
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderTable(elId, headers, rows){
+  const el = document.getElementById(elId);
+  if(!rows.length){ el.innerHTML = "<tr><td>데이터가 없습니다.</td></tr>"; return; }
+  const thead = "<tr>" + headers.map(h=>`<th>${escapeHtml(h)}</th>`).join("") + "</tr>";
+  const tbody = rows.map(row => "<tr>" + row.map(cell=>`<td>${escapeHtml(cell)}</td>`).join("") + "</tr>").join("");
+  el.innerHTML = thead + tbody;
+}
+
+function renderTeacherDashboard(){
+  const students = teacherData.students;
+  document.getElementById("teacherSummaryText").textContent =
+    `등록 학생 ${students.length}명 · 조건별 인원 — ` +
+    Object.entries(CONDITION_LABEL).map(([k,label]) => `${label} ${students.filter(s=>s.condition===k).length}명`).join(" / ");
+
+  renderTable("tableStudents",
+    ["학번","이름","조건","진단점수","진단티어","진행상태"],
+    students.map(s => [
+      s.student_no, s.name, CONDITION_LABEL[s.condition] || s.condition,
+      s.diagnostic_score ?? "-", s.diagnostic_tier ?? "-", computeStudentProgress(s.student_no)
+    ])
+  );
+
+  const studentMap = Object.fromEntries(students.map(s=>[s.student_no, s]));
+  const hintRows = teacherData.responses
+    .filter(r => r.phase === "practice")
+    .sort((a,b)=> a.student_no.localeCompare(b.student_no) || a.round_no - b.round_no || a.item_id.localeCompare(b.item_id));
+
+  renderTable("tableHints",
+    ["학번","이름","조건","차시","문항ID","1단계(초)","2단계(초)","3단계(초)","정답여부"],
+    hintRows.map(r => {
+      const s = studentMap[r.student_no] || {};
+      return [
+        r.student_no, s.name || "-", CONDITION_LABEL[s.condition] || s.condition || "-",
+        r.round_no, r.item_id,
+        r.hint_tier1_sec ?? "-", r.hint_tier2_sec ?? "-", r.hint_tier3_sec ?? "-",
+        r.is_correct === true ? "정답" : (r.is_correct === false ? "오답" : "-")
+      ];
+    })
+  );
+}
+
+function downloadCSV(filename, rows){
+  if(!rows.length){ alert("내보낼 데이터가 없습니다."); return; }
+  const headers = Object.keys(rows[0]);
+  const escapeCsv = (v)=> {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const csv = [headers.join(",")].concat(
+    rows.map(row => headers.map(h => escapeCsv(row[h])).join(","))
+  ).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("btnExportResponses").addEventListener("click", ()=>{
+  downloadCSV("responses.csv", teacherData.responses);
+});
+document.getElementById("btnExportReflections").addEventListener("click", ()=>{
+  downloadCSV("reflections.csv", teacherData.reflections);
+});
+</script>
+</body>
+</html>

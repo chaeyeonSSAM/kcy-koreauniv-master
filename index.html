@@ -42,7 +42,7 @@
   h2{font-size:17px; margin:0 0 12px; color:var(--blue-dark);}
   p.desc{color:var(--muted); font-size:14px; line-height:1.6;}
   label{display:block; font-size:13px; color:var(--muted); margin:14px 0 6px;}
-  input[type=text], textarea{
+  input[type=text], textarea, select{
     width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:10px;
     font-size:15px; font-family:inherit; background:#fff;
   }
@@ -135,6 +135,14 @@
     <div class="card">
       <h1>오늘의 파이썬 활동</h1>
       <p class="desc">변수·조건문·반복문·함수를 총 4차시에 걸쳐 점검합니다. 학번과 이름을 입력하면 오늘 진행할 차시로 자동으로 안내돼요.</p>
+      <label>반</label>
+      <select id="inputClassNo">
+        <option value="" selected disabled>반을 선택하세요</option>
+        <option value="10">10반</option>
+        <option value="11">11반</option>
+        <option value="12">12반</option>
+        <option value="13">13반</option>
+      </select>
       <label>학번</label>
       <input type="text" id="inputStudentNo" placeholder="예: 20305" inputmode="numeric" />
       <label>이름</label>
@@ -172,11 +180,11 @@
       <p class="desc" id="teacherSummaryText">불러오는 중...</p>
 
       <div class="dash-section">
-        <h2>학생 레벨화 (진단평가 상/중/하 나누기)</h2>
-        <p class="muted-small">진단평가 점수가 있는 학생을 점수 상위·중위·하위 1/3씩 상/중/하로 나눕니다. 아직 진단평가를 안 한 학생은 제외됩니다. <strong>가능하면 모든 반의 진단평가가 끝난 뒤 한 번만 실행</strong>하세요 — 다시 실행하면 등급이 재계산됩니다(단, 학생에게 이미 보여준 맞춤힌트 단계 자체는 responses에 그대로 남아 바뀌지 않습니다).</p>
+        <h2>학생 레벨화 + 조건 무작위배정</h2>
+        <p class="muted-small">① 진단평가 점수가 있는 학생을 점수 상위·중위·하위 1/3씩 상/중/하로 나누고, ② 반(class_no) × 등급 블록 안에서 4개 조건(힌트없음/자동힌트/자기선택힌트/AI자유)에 무작위로 배정합니다. <strong>이미 조건이 배정된 학생은 다시 실행해도 등급·조건이 바뀌지 않습니다</strong> — 아직 조건이 없는(=아직 진단평가만 끝낸) 학생만 대상이 됩니다. 그래서 반별로 시간차가 있어도 여러 번 나눠 실행해도 안전하지만, 등급 기준의 일관성을 위해 가능하면 모든 반이 끝난 뒤 한 번에 실행하는 것을 권장합니다.</p>
         <p class="desc" id="levelingSummaryText"></p>
         <div class="dash-tools">
-          <button class="btn-primary" id="btnRunLeveling">상/중/하 나누기 실행</button>
+          <button class="btn-primary" id="btnRunLeveling">레벨화 + 조건 배정 실행</button>
         </div>
       </div>
 
@@ -342,7 +350,10 @@
       <label>② 그때 배운 내용 중에서 오늘까지 기억에 남아 도움이 된 부분이 있다면 적어주세요. (없으면 없다고 적어도 괜찮아요)</label>
       <textarea class="prose" id="ref4Q2" placeholder="예: 조건문 순서를 위에서부터 검사한다는 게 기억에 남았어요."></textarea>
 
-      <label>③ 오늘도 그때의 학습 방식(힌트·피드백 방식)이 도움이 되었다고 생각하나요?</label>
+      <label>③ 진단평가를 볼 때와 비교해서, 지금은 스스로 학습을 계획하고 점검하는 방식이 달라졌다고 느끼나요? 어떤 점이 달라졌거나 그대로인지 적어주세요.</label>
+      <textarea class="prose" id="ref4Q3" placeholder="예: 그때는 일단 코드부터 썼는데, 지금은 먼저 어떤 순서로 풀지 생각해보고 시작해요."></textarea>
+
+      <label>④ 오늘도 그때의 학습 방식(힌트·피드백 방식)이 도움이 되었다고 생각하나요?</label>
       <div class="scale-row" id="ref4Scale">
         <button type="button" class="scale-btn" data-val="1">1<br><span>전혀 아니다</span></button>
         <button type="button" class="scale-btn" data-val="2">2</button>
@@ -390,6 +401,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_afJwvTH2gqjiqf2HRefONw_k_IlivJr";
 // 4차시(지연검사)를 열어줄 날짜. 1~3차시를 진행한 날로부터 2주 후 날짜로 바꿔주세요.
 // 이 날짜 이전에는 1~3차시를 마친 학생이 다시 접속해도 "4차시는 아직이에요" 화면만 보입니다.
 const ROUND4_UNLOCK_DATE = "2026-10-12"; // YYYY-MM-DD, 이 날짜의 00:00부터 4차시 진입 가능
+
+// ai_open 조건에서 "새 탭에서 열기" 눌렀을 때 이동할 학교 계약 학생용 AI(SenGPT) 주소.
+// ⚠️ 정확한 URL을 확인해서 아래 값을 바꿔주세요 — 지금은 확인 전 임시값입니다.
+const AI_OPEN_SERVICE_NAME = "SenGPT";
+const AI_OPEN_SERVICE_URL = "https://senedu.kr/";
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -697,26 +713,29 @@ function askConfirm(message){
 document.getElementById("btnStart").addEventListener("click", async ()=>{
   const studentNo = normalize(document.getElementById("inputStudentNo").value);
   const name = normalize(document.getElementById("inputName").value);
+  const classNoRaw = document.getElementById("inputClassNo").value;
+  const classNo = classNoRaw ? parseInt(classNoRaw, 10) : null;
   const errEl = document.getElementById("loginError");
   errEl.textContent = "";
-  if(!studentNo || !name){
-    errEl.textContent = "학번과 이름을 모두 입력해 주세요.";
+  if(!classNo || !studentNo || !name){
+    errEl.textContent = "반, 학번, 이름을 모두 입력해 주세요.";
     return;
   }
   document.getElementById("btnStart").disabled = true;
   document.getElementById("btnStart").textContent = "확인 중...";
 
   try{
-    const { data: regData, error: regErr } = await db.rpc("register_student", { p_student_no: studentNo, p_name: name });
+    const { data: regData, error: regErr } = await db.rpc("register_student", { p_student_no: studentNo, p_name: name, p_class_no: classNo });
     if(regErr) throw regErr;
     state.studentNo = studentNo;
     state.name = name;
-    state.condition = regData?.[0]?.out_condition || "no_hint";
+    state.condition = regData?.[0]?.out_condition || null;
 
     const { data: stepData, error: stepErr } = await db.rpc("get_next_step", { p_student_no: studentNo, p_name: name });
     if(stepErr) throw stepErr;
     const row = stepData?.[0] || {};
     if(row.out_diagnostic_tier) state.diagnosticTier = row.out_diagnostic_tier;
+    if(row.out_condition) state.condition = row.out_condition;
 
     startTimer();
     goToStep(row.out_next_step || "diagnostic");
@@ -737,6 +756,7 @@ document.getElementById("btnWaitingRefresh").addEventListener("click", async ()=
     if(stepErr) throw stepErr;
     const row = stepData?.[0] || {};
     if(row.out_diagnostic_tier) state.diagnosticTier = row.out_diagnostic_tier;
+    if(row.out_condition) state.condition = row.out_condition;
     goToStep(row.out_next_step || "waiting_for_leveling");
   }catch(e){
     console.error(e);
@@ -923,12 +943,12 @@ function buildItemDOM(item, {withHints=false} = {}){
     if(state.condition === "ai_open"){
       const aiBox = document.createElement("div");
       aiBox.className = "ai-box";
-      aiBox.innerHTML = `<p>이 문제는 AI를 자유롭게 활용해도 좋아요. 무엇을 물어봤는지, 어떤 도움을 받았는지 간단히 남겨주세요.</p>`;
+      aiBox.innerHTML = `<p>이 문제는 학교 AI(${AI_OPEN_SERVICE_NAME})를 자유롭게 활용해도 좋아요. 무엇을 물어봤는지, 어떤 도움을 받았는지 간단히 남겨주세요.</p>`;
       const aiLinkBtn = document.createElement("button");
       aiLinkBtn.className = "btn-ghost";
-      aiLinkBtn.textContent = "새 탭에서 AI 열기";
+      aiLinkBtn.textContent = `새 탭에서 ${AI_OPEN_SERVICE_NAME} 열기`;
       aiLinkBtn.addEventListener("click", ()=>{
-        window.open("https://claude.ai", "_blank");
+        window.open(AI_OPEN_SERVICE_URL, "_blank");
         box._aiUsed = true;
       });
       const aiNote = document.createElement("textarea");
@@ -1224,11 +1244,11 @@ document.querySelectorAll("#ref4Scale .scale-btn").forEach(btn=>{
     checkReflection4Ready();
   });
 });
-["ref4Q1","ref4Q2","ref4ScaleReason"].forEach(id=>{
+["ref4Q1","ref4Q2","ref4Q3","ref4ScaleReason"].forEach(id=>{
   document.getElementById(id).addEventListener("input", checkReflection4Ready);
 });
 function checkReflection4Ready(){
-  const filled = ["ref4Q1","ref4Q2","ref4ScaleReason"].every(id => normalize(document.getElementById(id).value).length > 0);
+  const filled = ["ref4Q1","ref4Q2","ref4Q3","ref4ScaleReason"].every(id => normalize(document.getElementById(id).value).length > 0);
   document.getElementById("btnReflection4Submit").disabled = !(filled && reflection4Scale);
 }
 
@@ -1243,6 +1263,7 @@ document.getElementById("btnReflection4Submit").addEventListener("click", async 
       condition: state.condition,
       q_practice_feel: document.getElementById("ref4Q1").value,
       q_posttest_link: document.getElementById("ref4Q2").value,
+      q_srl_change: document.getElementById("ref4Q3").value,
       satisfaction_scale: reflection4Scale,
       satisfaction_reason: document.getElementById("ref4ScaleReason").value
     }, { onConflict: "student_no,round_no" });
@@ -1309,7 +1330,7 @@ document.getElementById("btnTeacherLogin").addEventListener("click", async ()=>{
 document.getElementById("btnTeacherRefresh").addEventListener("click", loadTeacherDashboard);
 
 document.getElementById("btnRunLeveling").addEventListener("click", async ()=>{
-  const ok = await askConfirm("진단평가 점수가 있는 모든 학생을 상/중/하 1/3씩으로 나눕니다. 이미 등급이 있는 학생도 다시 계산되어 덮어써집니다. 실행할까요?");
+  const ok = await askConfirm("아직 조건이 배정되지 않은 학생들을 대상으로, 등급(상/중/하)을 매기고 반×등급 블록 안에서 4개 조건에 무작위 배정합니다. 이미 조건이 있는 학생은 그대로 유지됩니다. 실행할까요?");
   if(!ok) return;
   const btn = document.getElementById("btnRunLeveling");
   const summaryEl = document.getElementById("levelingSummaryText");
@@ -1319,16 +1340,21 @@ document.getElementById("btnRunLeveling").addEventListener("click", async ()=>{
     const { data, error } = await db.rpc("teacher_level_students", { p_password: teacherPassword });
     if(error) throw error;
     const rows = data || [];
-    const counts = { "상":0, "중":0, "하":0 };
-    rows.forEach(r => { if(counts[r.diagnostic_tier] !== undefined) counts[r.diagnostic_tier]++; });
-    summaryEl.textContent = `완료: 진단평가 응시 ${rows.length}명 → 상 ${counts["상"]}명 / 중 ${counts["중"]}명 / 하 ${counts["하"]}명으로 나눴습니다.`;
+    const tierCounts = { "상":0, "중":0, "하":0 };
+    const condCounts = { no_hint:0, auto_hint:0, self_hint:0, ai_open:0 };
+    rows.forEach(r => {
+      if(tierCounts[r.diagnostic_tier] !== undefined) tierCounts[r.diagnostic_tier]++;
+      if(condCounts[r.condition] !== undefined) condCounts[r.condition]++;
+    });
+    summaryEl.textContent = `완료: 진단평가 응시 ${rows.length}명 → 등급 상 ${tierCounts["상"]}명 / 중 ${tierCounts["중"]}명 / 하 ${tierCounts["하"]}명, 조건 ` +
+      Object.entries(CONDITION_LABEL).map(([k,label]) => `${label} ${condCounts[k]}명`).join(" / ");
     await loadTeacherDashboard();
   }catch(e){
     console.error("레벨화 실패", e);
     summaryEl.textContent = "레벨화에 실패했습니다. 새로고침 후 다시 시도해주세요.";
   }
   btn.disabled = false;
-  btn.textContent = "상/중/하 나누기 실행";
+  btn.textContent = "레벨화 + 조건 배정 실행";
 });
 
 async function loadTeacherDashboard(){
@@ -1360,7 +1386,7 @@ function computeStudentProgress(studentNo){
   const cnt = (round_no, phase) => resp.filter(r=>r.round_no===round_no && r.phase===phase).length;
   const hasRefl = (round_no) => refl.some(r=>r.round_no===round_no);
   if(cnt(1,"diagnostic") < 1) return "진단평가 전";
-  if(!student || !student.diagnostic_tier) return "레벨화 대기중";
+  if(!student || !student.diagnostic_tier || !student.condition) return "레벨화 대기중";
   if(cnt(1,"practice") < 4) return "1차시 연습 중";
   if(!hasRefl(1)) return "1차시 체크인 전";
   if(cnt(2,"practice") < 4) return "2차시 연습 중";
@@ -1394,9 +1420,9 @@ function renderTeacherDashboard(){
     Object.entries(CONDITION_LABEL).map(([k,label]) => `${label} ${students.filter(s=>s.condition===k).length}명`).join(" / ");
 
   renderTable("tableStudents",
-    ["학번","이름","조건","진단점수","진단티어","진행상태"],
+    ["반","학번","이름","조건","진단점수","진단티어","진행상태"],
     students.map(s => [
-      s.student_no, s.name, CONDITION_LABEL[s.condition] || s.condition,
+      s.class_no ?? "-", s.student_no, s.name, s.condition ? (CONDITION_LABEL[s.condition] || s.condition) : "-",
       s.diagnostic_score ?? "-", s.diagnostic_tier ?? "-", computeStudentProgress(s.student_no)
     ])
   );
